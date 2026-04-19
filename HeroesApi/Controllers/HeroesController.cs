@@ -10,11 +10,6 @@ namespace HeroesApi.Controllers;
 [Route("api/[controller]")]
 public class HeroesController : ControllerBase { 
 
-    [HttpGet]
-    public ActionResult<List<Hero>> GetAll() {
-        return Ok(HeroesStore.Heroes);
-    }
-
     [HttpGet("{id}")]
     public ActionResult<Hero> GetById(int id) {
         var hero = HeroesStore.Heroes.FirstOrDefault(h => h.Id == id);
@@ -70,5 +65,34 @@ public class HeroesController : ControllerBase {
             deserializedObject = deserialized,
             internalNotesAfterDeserialize = deserialized?.InternalNotes ?? "null - поле было проигнорировано"
         });
+    }
+
+    [HttpGet]
+    public ActionResult<List<Hero>> GetAll([FromQuery] string? universe = null){
+        var heroes = HeroesStore.Heroes;
+
+        if (!string.IsNullOrEmpty(universe)){
+            if (Enum.TryParse<Universe>(universe, true, out var parsedUniverse)){
+                heroes = heroes.Where(h => h.Universe == parsedUniverse).ToList();
+            }
+            else{
+                return Ok(new List<Hero>());
+            }
+        }
+        return Ok(heroes);
+    }
+
+    [HttpGet("search")]
+    public ActionResult<List<Hero>> Search([FromQuery] string? name){
+        if (string.IsNullOrEmpty(name)){
+            return Ok(HeroesStore.Heroes);
+        }
+
+        var heroes = HeroesStore.Heroes
+            .Where(h => h.Name.Contains(name, StringComparison.OrdinalIgnoreCase) ||
+                        h.RealName.Contains(name, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        return Ok(heroes);
     }
 }
